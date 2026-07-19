@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Résultats du Bac de l'académie de Reims (non officiel)</title>
+<style>
+  :root {
+    --primary: #3498db;
+    --primary-hover: #2980b9;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text: #2c3e50;
+    --border: #e2e8f0;
+    --success: #217346;
+    --success-hover: #1e663e;
+  }
+
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0; 
+    padding: 20px; 
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    margin-top: 0;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    background: #f1f5f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .filter-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #64748b;
+  }
+
+  input, select { 
+    padding: 8px 12px; 
+    font-size: 0.95em; 
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--primary);
+  }
+
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+  }
+
+  .btn-excel {
+    background-color: var(--success);
+    color: white;
+  }
+
+  .btn-excel:hover {
+    background-color: var(--success-hover);
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+  }
+
+  #count { 
+    font-weight: bold; 
+    color: #475569;
+  }
+
+  table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    margin-top: 10px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+
+  th, td { 
+    padding: 12px; 
+    text-align: left; 
+    border-bottom: 1px solid var(--border);
+  }
+
+  th { 
+    background-color: #f8fafc; 
+    font-weight: 600;
+    color: #475569;
+  }
+
+  tr:hover { 
+    background-color: #f8fafc; 
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .badge-yes { background-color: #fee2e2; color: #991b1b; }
+  .badge-no { background-color: #f1f5f9; color: #475569; }
+
+  .loader {
+    text-align: center;
+    padding: 40px;
+    font-size: 1.1rem;
+    color: #64748b;
+  }
+
+  .load-more-container {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Résultats du Bac (Académie de Reims)</h1>
+
+  <div class="filters-grid">
+    <div class="filter-group">
+      <label for="filterNom">Filtrer par nom :</label>
+      <input type="text" id="filterNom" placeholder="Ex: NOL" />
+    </div>
+
+    <div class="filter-group">
+      <label for="filterPrenom">Filtrer par prénom :</label>
+      <input type="text" id="filterPrenom" placeholder="Ex: Tom" />
+    </div>
+
+    <div class="filter-group">
+      <label for="sortSelect">Trier par :</label>
+      <select id="sortSelect">
+        <option value="mention">Mention</option>
+        <option value="nom">Nom</option>
+        <option value="prenoms">Prénom</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="actions">
+    <div id="count">Chargement en cours...</div>
+    <button class="btn btn-excel" id="exportBtn">Exporter vers Excel (CSV)</button>
+  </div>
+
+  <div id="loader" class="loader">Chargement des données...</div>
+
+  <table id="resultsTable" class="hidden">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Prénom(s)</th>
+        <th>Résultat</th>
+        <th>Homonyme</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="load-more-container">
+    <button id="loadMoreBtn" class="btn btn-primary hidden">Afficher plus de résultats</button>
+  </div>
+</div>
+
+<script>
+const mentionsOrder = [
+  "Admis Mention Très Bien avec les félicitations du jury",
+  "Admis Mention Très Bien",
+  "Admis Mention Bien",
+  "Admis Mention Assez Bien",
+  "Admis",
+  "Passe le second groupe",
+  "Ajourné"
+];
+
+let allResults = [];
+let filteredResults = [];
+let displayLimit = 200;
+
+async function loadResults() {
+  const loader = document.getElementById("loader");
+  const table = document.getElementById("resultsTable");
+  try {
+    const response = await fetch('resultatsFinal.json');
+    if (!response.ok) throw new Error("Fichier introuvable.");
+    const data = await response.json();
+    allResults = [];
+
+    for (const key in data) {
+      if (Array.isArray(data[key])) {
+        allResults.push(...data[key]);
+      }
+    }
+    
+    loader.classList.add("hidden");
+    table.classList.remove("hidden");
+    updateDisplay();
+  } catch (e) {
+    loader.textContent = "Erreur de chargement de 'resultats.json' : " + e.message;
+  }
+}
+
+function mentionRank(mention) {
+  const idx = mentionsOrder.findIndex(m => mention.startsWith(m));
+  return idx === -1 ? mentionsOrder.length : idx;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
+function updateDisplay() {
+  const filterNom = document.getElementById("filterNom").value.trim().toLowerCase();
+  const filterPrenom = document.getElementById("filterPrenom").value.trim().toLowerCase();
+  const sortBy = document.getElementById("sortSelect").value;
+
+  filteredResults = allResults.filter(item => {
+    const nom = item.nom.toLowerCase();
+    const prenoms = item.prenoms.toLowerCase();
+    if (filterNom.length > 0 && !nom.includes(filterNom)) return false;
+    if (filterPrenom.length > 0 && !prenoms.includes(filterPrenom)) return false;
+    return true;
+  });
+
+  filteredResults.sort((a,b) => {
+    if (sortBy === "mention") {
+      return mentionRank(a.resultat) - mentionRank(b.resultat);
+    } else if (sortBy === "nom") {
+      return a.nom.localeCompare(b.nom);
+    } else if (sortBy === "prenoms") {
+      return a.prenoms.localeCompare(b.prenoms);
+    }
+    return 0;
+  });
+
+  document.getElementById("count").textContent = `Nombre de résultats trouvés : ${filteredResults.length}`;
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#resultsTable tbody");
+  tbody.innerHTML = "";
+  
+  const toShow = filteredResults.slice(0, displayLimit);
+  
+  if (toShow.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b;">Aucun résultat ne correspond aux filtres.</td></tr>`;
+    document.getElementById("loadMoreBtn").classList.add("hidden");
+    return;
+  }
+
+  for (const r of toShow) {
+    const tr = document.createElement("tr");
+    const homonymeBadge = r.homonyme 
+      ? `<span class="badge badge-yes">Oui</span>` 
+      : `<span class="badge badge-no">Non</span>`;
+      
+    tr.innerHTML = `
+      <td>${escapeHtml(r.nom)}</td>
+      <td>${escapeHtml(r.prenoms)}</td>
+      <td>${escapeHtml(r.resultat)}</td>
+      <td>${homonymeBadge}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  const loadMoreBtn = document.getElementById("loadMoreBtn");
+  if (filteredResults.length > displayLimit) {
+    loadMoreBtn.classList.remove("hidden");
+    loadMoreBtn.textContent = `Afficher plus (Reste ${filteredResults.length - displayLimit} lignes)`;
+  } else {
+    loadMoreBtn.classList.add("hidden");
+  }
+}
+
+function exportToCSV() {
+  if (filteredResults.length === 0) {
+    alert("Aucun résultat disponible à l'export.");
+    return;
+  }
+  
+  // Signature UTF-8 BOM pour forcer Excel à lire correctement les accents
+  let csvContent = "\uFEFF";
+  csvContent += "Nom;Prénom(s);Résultat;Homonyme\n";
+  
+  filteredResults.forEach(r => {
+    const homonymeStr = r.homonyme ? "Oui" : "Non";
+    // Échappement des guillemets pour éviter de casser le format CSV
+    const nom = r.nom.replace(/"/g, '""');
+    const prenoms = r.prenoms.replace(/"/g, '""');
+    const resultat = r.resultat.replace(/"/g, '""');
+    
+    csvContent += `"${nom}";"${prenoms}";"${resultat}";"${homonymeStr}"\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "resultats_bac.csv");
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Réinitialisation de la limite lors de l'édition des filtres
+function handleFilterChange() {
+  displayLimit = 200;
+  updateDisplay();
+}
+
+document.getElementById("filterNom").addEventListener("input", handleFilterChange);
+document.getElementById("filterPrenom").addEventListener("input", handleFilterChange);
+document.getElementById("sortSelect").addEventListener("change", handleFilterChange);
+
+document.getElementById("loadMoreBtn").addEventListener("click", () => {
+  displayLimit += 300;
+  renderTable();
+});
+
+document.getElementById("exportBtn").addEventListener("click", exportToCSV);
+
+// Initialisation
+loadResults();
+</script>
+
+</body>
+</html>
